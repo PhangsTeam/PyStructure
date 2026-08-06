@@ -308,7 +308,7 @@ class KeyHandler:
                     in_paths = True
                     continue
                 if _stripped.startswith("[") and in_paths:
-                    break   # left the [paths] section
+                    break  # left the [paths] section
                 if in_paths and _stripped.lower().startswith("root_dir"):
                     # key = value  (inline comments already stripped by the
                     # inline_comment_prefixes=('#',) convention used elsewhere)
@@ -329,6 +329,12 @@ class KeyHandler:
         self.meta["folder_savefits"] = str(
             base / _get_path("folder_savefits", "./saved_fits_files/")
         )
+        # Per-category output directories (optional).  When a key is not set
+        # the category falls back to folder_savefits so existing configs
+        # continue to work without any changes.
+        for _cat in ("folder_cubes", "folder_moms", "folder_maps", "folder_masks"):
+            _raw = paths.get(_cat, "").strip()
+            self.meta[_cat] = str(base / _raw) if _raw else None
         # geom_file and hfs_file are always resolved relative to the config
         # file's own directory (conf_base), not to root_dir.  These are
         # project-level key files that live next to config.txt and should
@@ -337,7 +343,9 @@ class KeyHandler:
             conf_base / paths.get("geom_file", "keys/target_definitions.txt")
         )
         self.meta["hfs_file"] = (
-            str(conf_base / paths.get("hfs_file", "")) if paths.get("hfs_file") else None
+            str(conf_base / paths.get("hfs_file", ""))
+            if paths.get("hfs_file")
+            else None
         )
 
         self.meta["user"] = _get_meta("user", "Unknown user")

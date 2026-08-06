@@ -790,7 +790,20 @@ def run_moments_ppv(
     save_mask=False,
     noise_mask_df=None,
     window_mask=None,
+    folder_masks=None,
 ):
+    """
+    Compute and write PPV-native moment maps for every cube of *target*.
+
+    Parameters
+    ----------
+    folder       : str — output directory for moment map FITS files.
+    folder_masks : str or None — output directory for mask FITS files.
+                   Falls back to *folder* when None.
+    """
+    # Resolve mask output directory
+    _folder_masks = folder_masks if folder_masks else folder
+    os.makedirs(_folder_masks, exist_ok=True)
     """
     Compute and write PPV-native moment maps for every cube of *target*.
 
@@ -1055,10 +1068,10 @@ def run_moments_ppv(
     # ------------------------------------------------------------------
     if save_mask:
         save_ppv_mask_to_fits(
-            mask, ov_hdr, target, "mask", folder, out_nan_mask=out_nan_mask
+            mask, ov_hdr, target, "mask", _folder_masks, out_nan_mask=out_nan_mask
         )
         LOG.info(
-            f"PPV mask cube written to: {os.path.join(folder, f'{target}_mask.fits')}"
+            f"PPV mask cube written to: {os.path.join(_folder_masks, f'{target}_mask.fits')}"
         )
         if use_individual:
             for line, lm in ppv_line_masks.items():
@@ -1068,12 +1081,12 @@ def run_moments_ppv(
                     ov_hdr,
                     target,
                     f"mask_{line.lower()}",
-                    folder,
+                    _folder_masks,
                     out_nan_mask=out_nan_mask,
                 )
                 LOG.info(
                     f"Individual PPV mask for {line} written to: "
-                    f"{os.path.join(folder, f'{target}_mask_{line.lower()}.fits')}"
+                    f"{os.path.join(_folder_masks, f'{target}_mask_{line.lower()}.fits')}"
                 )
 
     # ------------------------------------------------------------------
@@ -1101,12 +1114,12 @@ def run_moments_ppv(
                     ov_hdr,
                     target,
                     hfs_mask_name,
-                    folder,
+                    _folder_masks,
                     out_nan_mask=out_nan_mask,
                 )
                 LOG.info(
                     f"PPV mask cube for {line_name} written to: "
-                    f"{os.path.join(folder, f'{target}_{hfs_mask_name}.fits')}"
+                    f"{os.path.join(_folder_masks, f'{target}_{hfs_mask_name}.fits')}"
                 )
         else:
             active_mask = mask
@@ -1228,11 +1241,24 @@ def run_fits(
     save_cubes = meta.get("save_cubes", True)
     folder = meta.get("folder_savefits", "./saved_fits_files/")
 
+    # Per-category output directories.  When a per-category key is set in
+    # [paths] it is used instead of folder_savefits for that category.
+    # All directories are created on demand.
+    def _cat_folder(key):
+        val = meta.get(key)  # None when the key was not set in [paths]
+        return val if val else folder
+
+    folder_moms = _cat_folder("folder_moms")
+    folder_maps = _cat_folder("folder_maps")
+    folder_masks = _cat_folder("folder_masks")
+    folder_cubes = _cat_folder("folder_cubes")
+
     if not (save_mom_maps or save_maps or save_mask or save_cubes):
         LOG.info(f"Output writing disabled for {target}; skipping.")
         return
 
-    os.makedirs(folder, exist_ok=True)
+    for _d in {folder_moms, folder_maps, folder_masks, folder_cubes}:
+        os.makedirs(_d, exist_ok=True)
 
     # ------------------------------------------------------------------
     # Load overlay cube to get the reference WCS and footprint mask
@@ -1275,12 +1301,13 @@ def run_fits(
             input_mask,
             hfs_data,
             params,
-            folder,
+            folder_moms,
             save_mask=save_mask,
             noise_mask_df=noise_mask_df,
             window_mask=window_mask,
+            folder_masks=folder_masks,
         )
-        LOG.info(f"Moment map FITS files written to: {folder}")
+        LOG.info(f"Moment map FITS files written to: {folder_moms}")
     elif save_mask:
         LOG.warning(
             f"save_mask is True but save_mom_maps is False for {target}; "
@@ -1339,7 +1366,7 @@ def run_fits(
                     meta=meta,
                 )
                 fname_map = os.path.join(
-                    folder, f"{target}_{map_name}_{res_suffix}.fits"
+                    folder_maps, f"{target}_{map_name}_{res_suffix}.fits"
                 )
                 fits.writeto(fname_map, data=map_data, header=map_hdr, overwrite=True)
             except FileNotFoundError:
@@ -1369,7 +1396,7 @@ def run_fits(
                         meta=meta,
                     )
                     fname_unc = os.path.join(
-                        folder, f"{target}_{map_name}_{res_suffix}_err.fits"
+                        folder_maps, f"{target}_{map_name}_{res_suffix}_err.fits"
                     )
                     fits.writeto(
                         fname_unc, data=unc_data, header=unc_hdr, overwrite=True
@@ -1380,7 +1407,7 @@ def run_fits(
                         f"raw input file {map_uc} not found."
                     )
 
-        LOG.info(f"2D map FITS files written to: {folder}")
+        LOG.info(f"2D map FITS files written to: {folder_maps}")
 
     # ------------------------------------------------------------------
     # Convolved cubes — independent of save_mom_maps so users can save
@@ -1432,7 +1459,7 @@ def run_fits(
             cube_data[:, _out_nan] = np.nan
 
             cube_fits_path = os.path.join(
-                folder, f"{target}_{row['line_name']}_{res_suffix}.fits"
+                folder_cubes, f"{target}_{row['line_name']}_{res_suffix}.fits"
             )
             fits.writeto(
                 cube_fits_path,

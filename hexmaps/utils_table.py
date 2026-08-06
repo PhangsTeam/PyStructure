@@ -624,7 +624,7 @@ def parse_ref_line(ref_line_method, line_names):
             continue
 
         if upper in ("FIRST", "ALL"):
-            line_tokens.append(upper.lower())   # store canonical lowercase
+            line_tokens.append(upper.lower())  # store canonical lowercase
             continue
 
         # Positive integer?

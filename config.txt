@@ -50,8 +50,16 @@ out_dir = output/
 # used if that file actually exists.
 # hfs_file = keys/hfs_lines.txt
 
-# Directory for output FITS maps
+# Directory for output FITS maps (all categories default to this directory)
 folder_savefits = ./saved_fits_files/
+
+# Optional: per-category output directories for the FITS stage.
+# When set, each category is written to its own directory instead of
+# folder_savefits. Unset keys fall back to folder_savefits.
+# folder_cubes =     # convolved PPV cubes
+# folder_moms =      # moment maps (mom0, mom1, mom2, rms, tpeak, ew, ...)
+# folder_maps =      # 2D images
+# folder_masks =     # PPV mask cubes
 
 
 # -----------------------------------------------------------------------------
